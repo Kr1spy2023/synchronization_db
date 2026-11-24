@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v4
+
+      - name: Установить Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Сборка (установка зависимостей)
+        run: pip install -r requirements.txt
+
+      - name: Линтер flake8
+        run: flake8 src tests
+
+      - name: Форматтер black и isort
+        run: |
+          black --check src tests
+          isort --check-only src tests
+
+      - name: Тесты и покрытие
+        run: pytest --cov=src --cov-report=term-missing --cov-report=xml
+
+      - name: Сохранить отчёт о покрытии
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  # Проверка на настоящем MySQL. Отдельная задача: её не нужно делать обязательной в Branch Protection.
+  mysql-integration:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ptest"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Установка зависимостей
+        run: pip install -r requirements.txt cryptography
+      - name: Интеграционные тесты на MySQL
+        env:
+          MYSQL_TEST_URL: mysql://root:test@127.0.0.1:3306/test
+        run: pytest tests/test_mysql_integration.py -v

@@ -1,0 +1,3 @@
+src/db_sync/ @Kr1spy2023
+src/app.py src/seed.py src/templates/ src/static/ @Kr1spy2023
+tests/ docs/ @Snakered7736
