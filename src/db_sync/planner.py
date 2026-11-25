@@ -8,6 +8,7 @@ from .adapters import is_valid_identifier
 from .dbtypes import norm
 
 PREVIEW_ROWS = 5
+SIGNATURE_LENGTH = 16  # длина отпечатка плана
 
 
 @dataclass
@@ -81,9 +82,11 @@ class SyncPlan:
             [t.name, t.schema_sql, len(t.inserts), len(t.updates), len(t.deletes), t.skipped]
             for t in self.tables
         ]
-        return hashlib.sha256(json.dumps(data, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
+        digest = hashlib.sha256(json.dumps(data, ensure_ascii=False).encode("utf-8")).hexdigest()
+        return digest[:SIGNATURE_LENGTH]
 
     def summary_lines(self):
+        """Краткое описание плана: по одной строке на таблицу."""
         lines = []
         for t in self.tables:
             if t.skipped:
@@ -155,6 +158,7 @@ def build_table_plan(source, target, table, delete_missing=False, schema=True):
     key_idx = [plan.columns.index(k) for k in plan.key_columns]
 
     def key_of(values, index_by_name=None):
+        """Ключ строки в общем виде, чтобы сравнивать значения из разных баз."""
         return tuple(norm(values[i], families[plan.key_columns[n]]) for n, i in enumerate(key_idx))
 
     src_rows = source.rows(table, plan.columns, plan.key_columns)

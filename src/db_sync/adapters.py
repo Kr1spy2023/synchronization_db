@@ -14,10 +14,13 @@ from .dbtypes import (
 )
 from .errors import ConnectionFailed, ValidationError
 
+DEFAULT_MYSQL_PORT = 3306
+
 _IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
 
 
 def is_valid_identifier(name):
+    """Проверяет, что имя таблицы или столбца безопасно использовать в SQL."""
     return isinstance(name, str) and bool(_IDENT_RE.match(name))
 
 
@@ -39,6 +42,7 @@ class Adapter:
 
     # ---------- имена и SQL ----------
     def quote(self, name):
+        """Проверяет имя и берёт его в кавычки своего диалекта."""
         check_identifier(name)
         return self._quote(name)
 
@@ -48,6 +52,7 @@ class Adapter:
     auto_increment_sql = ""
 
     def column_sql(self, column, with_not_null=True, auto=False):
+        """Возвращает описание столбца для CREATE TABLE и ALTER TABLE."""
         parts = [self.quote(column.name), self.type_sql(column)]
         if with_not_null and (not column.nullable or column.pk):
             parts.append("NOT NULL")
@@ -137,15 +142,18 @@ class Adapter:
         self._conn.rollback()
 
     def close(self):
+        """Закрывает соединение с базой, если оно открыто."""
         if self._conn is not None:
             self._conn.close()
             self._conn = None
 
     # ---------- схема ----------
     def tables(self):
+        """Возвращает список имён таблиц базы."""
         raise NotImplementedError
 
     def columns(self, table):
+        """Возвращает список столбцов (Column) указанной таблицы."""
         raise NotImplementedError
 
     def describe(self):
@@ -178,6 +186,7 @@ class SQLiteAdapter(Adapter):
         self.execute("ROLLBACK")
 
     def tables(self):
+        """Имена пользовательских таблиц SQLite (служебные sqlite_* пропускаются)."""
         rows = self.fetchall(
             "SELECT name FROM sqlite_master "
             "WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
@@ -185,6 +194,7 @@ class SQLiteAdapter(Adapter):
         return [r[0] for r in rows]
 
     def columns(self, table):
+        """Столбцы таблицы SQLite, прочитанные через PRAGMA table_info."""
         rows = self.fetchall(f"PRAGMA table_info({self.quote(table)})")
         return [
             Column(
@@ -212,7 +222,7 @@ class MySQLAdapter(Adapter):
     placeholder = "%s"
     auto_increment_sql = "AUTO_INCREMENT"
 
-    def __init__(self, host, user, password, database, port=3306, driver=None):
+    def __init__(self, host, user, password, database, port=DEFAULT_MYSQL_PORT, driver=None):
         super().__init__()
         self.host, self.database, self.port, self.user = host, database, port, user
         if driver is None:
@@ -257,6 +267,7 @@ class MySQLAdapter(Adapter):
         self.execute("SET FOREIGN_KEY_CHECKS = 1")
 
     def tables(self):
+        """Имена обычных таблиц текущей базы MySQL."""
         rows = self.fetchall(
             "SELECT table_name FROM information_schema.tables "
             "WHERE table_schema = %s AND table_type = 'BASE TABLE' ORDER BY table_name",
@@ -265,6 +276,7 @@ class MySQLAdapter(Adapter):
         return [r[0] for r in rows]
 
     def columns(self, table):
+        """Столбцы таблицы MySQL с типами, обязательностью и первичным ключом."""
         info = self.fetchall(
             "SELECT column_name, data_type, column_type, is_nullable, character_maximum_length "
             "FROM information_schema.columns WHERE table_schema = %s AND table_name = %s "
@@ -319,7 +331,7 @@ def connect(url, driver=None):
             urllib.parse.unquote(parsed.username or ""),
             urllib.parse.unquote(parsed.password or ""),
             database,
-            parsed.port or 3306,
+            parsed.port or DEFAULT_MYSQL_PORT,
             driver=driver,
         )
     raise ValidationError(f"Неизвестный тип БД: {parsed.scheme}")

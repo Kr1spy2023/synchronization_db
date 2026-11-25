@@ -10,6 +10,7 @@ from .errors import SafetyError, ValidationError
 from .planner import SyncPlan, build_table_plan
 
 CHUNK = 500
+HISTORY_LIMIT = 20  # сколько последних синхронизаций показывать
 DIRECTIONS = ("push", "pull")
 
 
@@ -173,12 +174,12 @@ class DbSync:
         """Забирает изменения с сервера в локальную БД. При dry_run только возвращает план."""
         return self._run("pull", tables, exclude, delete_missing, schema, confirm, dry_run)
 
-    def history(self, limit=20):
+    def history(self, limit=HISTORY_LIMIT):
         """Последние синхронизации, новые первыми."""
         return list(reversed(self._history))[:limit]
 
     @staticmethod
-    def read_history_file(path, limit=20):
+    def read_history_file(path, limit=HISTORY_LIMIT):
         """Читает журнал синхронизаций из файла history_path, новые первыми."""
         try:
             with open(path, encoding="utf-8") as f:
@@ -188,6 +189,7 @@ class DbSync:
         return list(reversed(entries))[:limit]
 
     def close(self):
+        """Закрывает оба соединения: локальное и с сервером."""
         self.local.close()
         self.remote.close()
 
