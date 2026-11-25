@@ -1,0 +1,34 @@
+@startuml
+left to right direction
+title UML Use Case: синхронизация локальной БД с сервером
+actor "Разработчик" as D
+actor "Тестировщик" as T
+actor "Сервер MySQL" as S
+T <|-- D
+
+rectangle "Система «Синхронизация БД»" {
+  usecase "Сравнить локальную БД и сервер" as UC1
+  usecase "Построить план (что изменится)" as UC2
+  usecase "Отправить изменения на сервер" as UC3
+  usecase "Забрать изменения с сервера" as UC4
+  usecase "Выбрать таблицы и режим удаления" as UC5
+  usecase "Подтвердить запись" as UC6
+  usecase "Просмотреть историю синхронизаций" as UC7
+  usecase "Просмотреть данные таблиц" as UC8
+  usecase "Откатить изменения при ошибке" as UC9
+}
+
+D --> UC1
+D --> UC2
+D --> UC3
+D --> UC4
+D --> UC5
+D --> UC6
+T --> UC7
+T --> UC8
+UC3 ..> UC6 : <<include>>
+UC3 ..> UC9 : <<include>>
+UC3 --> S
+UC4 --> S
+UC1 --> S
+@enduml

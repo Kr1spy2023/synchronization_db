@@ -1,0 +1,30 @@
+@startuml
+title UML Sequence: отправка изменений на сервер (push)
+actor "Разработчик" as D
+participant "Панель (Flask)" as UI
+participant "DbSync" as SYNC
+database "Локальная БД\n(SQLite)" as L
+database "Сервер\n(MySQL)" as R
+
+D -> UI: POST /plan (push, таблицы)
+UI -> SYNC: plan("push")
+SYNC -> L: чтение схемы и строк
+SYNC -> R: чтение схемы и строк
+SYNC -> SYNC: сравнение по первичному ключу
+SYNC --> UI: план (добавить/изменить/удалить, SQL схемы)
+UI --> D: страница плана
+
+D -> UI: POST /apply (confirm, signature)
+UI -> SYNC: plan("push") и проверка отпечатка
+UI -> SYNC: apply(plan, confirm=True)
+SYNC -> R: BEGIN
+SYNC -> R: CREATE/ALTER TABLE, INSERT, UPDATE
+alt успех
+  SYNC -> R: COMMIT
+  SYNC --> UI: результат: ok
+else ошибка
+  SYNC -> R: ROLLBACK
+  SYNC --> UI: результат: ошибка, изменений нет
+end
+UI --> D: страница результата
+@enduml
