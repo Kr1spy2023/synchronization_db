@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}План синхронизации{% endblock %}
+{% block content %}
+<h1>План: {{ 'отправить на сервер' if plan.direction == 'push' else 'забрать с сервера' }}</h1>
+<p>Источник: <b>{{ plan.source }}</b> → цель: <b>{{ plan.target }}</b></p>
+
+<table>
+  <thead><tr><th>Таблица</th><th>Добавить</th><th>Изменить</th><th>Удалить</th><th>Без изменений</th><th>Схема</th></tr></thead>
+  <tbody>
+  {% for t in plan.tables %}
+    <tr>
+      <td><b>{{ t.name }}</b>{% if t.skipped %}<br><span class="badge fail">пропущена: {{ t.skipped }}</span>{% endif %}
+        {% for w in t.warnings %}<br><span class="muted">{{ w }}</span>{% endfor %}</td>
+      <td>{{ t.inserts|length }}</td><td>{{ t.updates|length }}</td>
+      <td>{% if t.deletes %}<b class="warn">{{ t.deletes|length }}</b>{% else %}0{% endif %}</td>
+      <td>{{ t.unchanged }}</td><td>{{ t.schema_sql|length }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if plan.schema_sql %}
+<h2>Изменения схемы</h2>
+<pre>{% for sql in plan.schema_sql %}{{ sql }};
+{% endfor %}</pre>
+{% endif %}
+
+{% for t in plan.tables %}{% set p = previews[loop.index0] %}
+  {% if p.inserts or p.updates or p.deletes %}
+  <details open>
+    <summary>{{ t.name }}: примеры строк</summary>
+    {% for kind, title in [('inserts', 'Будут добавлены'), ('updates', 'Будут изменены (новые значения)'), ('deletes', 'Будут удалены (ключи)')] %}
+      {% if p[kind] %}<p class="muted">{{ title }}:</p>
+      <ul>{% for row in p[kind] %}<li>{{ row }}</li>{% endfor %}</ul>{% endif %}
+    {% endfor %}
+  </details>
+  {% endif %}
+{% endfor %}
+
+{% if plan.is_empty %}
+  <p class="flash ok">Базы уже совпадают, выполнять нечего.</p>
+  <p><a href="{{ url_for('index') }}">Назад</a></p>
+{% else %}
+<form method="post" action="{{ url_for('apply_view') }}" class="card">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <input type="hidden" name="direction" value="{{ plan.direction }}">
+  <input type="hidden" name="signature" value="{{ plan.signature }}">
+  {% if delete_missing %}<input type="hidden" name="delete_missing" value="1">{% endif %}
+  {% for name in tables %}<input type="hidden" name="tables" value="{{ name }}">{% endfor %}
+  <label class="inline"><input type="checkbox" name="confirm" value="1">
+    {% if plan.direction == 'push' %}Я понимаю, что изменения будут записаны на сервер продукта{% else %}Подтверждаю запись изменений в локальную базу{% endif %}
+    {% if plan.has_deletes %} (в том числе <b class="warn">удаление {{ plan.n_deletes }} строк</b>){% endif %}</label>
+  <p><button class="{{ 'danger-btn' if plan.direction == 'push' else '' }}">Применить план</button> <a href="{{ url_for('index') }}">Отмена</a></p>
+</form>
+{% endif %}
+{% endblock %}

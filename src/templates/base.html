@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Синхронизация БД{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <a class="brand" href="{{ url_for('index') }}">Синхронизация БД</a>
+  <nav>
+    <a href="{{ url_for('index') }}">Сравнение</a>
+    <a href="{{ url_for('history') }}">История</a>
+  </nav>
+</header>
+<main>
+  <p class="endpoints"><span class="end local">Локальная: {{ local_name }}</span> <span class="end remote">Сервер: {{ remote_name }}</span></p>
+  {% for category, message in get_flashed_messages(with_categories=true) %}
+    <p class="flash {{ category }}">{{ message }}</p>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

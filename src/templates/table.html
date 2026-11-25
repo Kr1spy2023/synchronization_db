@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Таблица {{ name }}{% endblock %}
+{% block content %}
+<h1>{{ name }} <small>({{ 'локальная БД' if side == 'local' else 'сервер' }}, до 50 строк)</small></h1>
+<table>
+  <thead><tr>{% for c in columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for row in rows %}<tr>{% for v in row %}<td>{{ v if v is not none else '' }}</td>{% endfor %}</tr>
+  {% else %}<tr><td colspan="{{ columns|length }}">Строк нет</td></tr>{% endfor %}
+  </tbody>
+</table>
+<p><a href="{{ url_for('index') }}">Назад</a></p>
+{% endblock %}

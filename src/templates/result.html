@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Результат{% endblock %}
+{% block content %}
+<h1>Результат синхронизации</h1>
+{% if result.ok %}
+  <p class="flash ok">Готово: добавлено {{ result.inserted }}, изменено {{ result.updated }}, удалено {{ result.deleted }}.</p>
+  {% if result.schema_sql %}<h2>Выполненные изменения схемы</h2><pre>{% for sql in result.schema_sql %}{{ sql }};
+{% endfor %}</pre>{% endif %}
+  <table>
+    <thead><tr><th>Таблица</th><th>Добавлено</th><th>Изменено</th><th>Удалено</th></tr></thead>
+    <tbody>{% for t in result.tables %}<tr><td>{{ t.name }}</td><td>{{ t.inserted }}</td><td>{{ t.updated }}</td><td>{{ t.deleted }}</td></tr>{% endfor %}</tbody>
+  </table>
+{% else %}
+  <p class="flash error">Ошибка, изменения отменены: {{ result.error }}</p>
+{% endif %}
+<p><a href="{{ url_for('index') }}">К сравнению баз</a> · <a href="{{ url_for('history') }}">История</a></p>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}История{% endblock %}
+{% block content %}
+<h1>История синхронизаций</h1>
+<table>
+  <thead><tr><th>Время</th><th>Направление</th><th>Таблицы</th><th>Добавлено</th><th>Изменено</th><th>Удалено</th><th>Схема</th><th>Результат</th></tr></thead>
+  <tbody>
+  {% for h in items %}
+    <tr>
+      <td class="nowrap">{{ h.time|ts }}</td>
+      <td>{{ 'на сервер' if h.direction == 'push' else 'с сервера' }}</td>
+      <td>{{ h.tables|join(', ') }}</td>
+      <td>{{ h.inserted }}</td><td>{{ h.updated }}</td><td>{{ h.deleted }}</td><td>{{ h.schema_changes }}</td>
+      <td>{% if h.ok %}<span class="badge done">успешно</span>{% else %}<span class="badge fail">{{ h.error }}</span>{% endif %}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8">Синхронизаций ещё не было</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

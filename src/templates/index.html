@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Сравнение баз{% endblock %}
+{% block content %}
+<h1>Сравнение баз</h1>
+<table>
+  <thead><tr><th>Таблица</th><th>Локально</th><th>На сервере</th><th>Только локально</th><th>Только на сервере</th><th>Отличаются</th><th>Совпадают</th></tr></thead>
+  <tbody>
+  {% for t in status %}
+    <tr>
+      <td><b>{{ t.name }}</b>{% for n in t.notes %}<br><span class="muted">{{ n }}</span>{% endfor %}</td>
+      <td>{% if t.in_local %}<a href="{{ url_for('table_view', side='local', name=t.name) }}">{{ t.local_rows }}</a>{% else %}<span class="badge fail">нет таблицы</span>{% endif %}</td>
+      <td>{% if t.in_remote %}<a href="{{ url_for('table_view', side='remote', name=t.name) }}">{{ t.remote_rows }}</a>{% else %}<span class="badge fail">нет таблицы</span>{% endif %}</td>
+      <td>{{ t.only_local if t.only_local is not none else '—' }}</td>
+      <td>{{ t.only_remote if t.only_remote is not none else '—' }}</td>
+      <td>{% if t.different %}<b class="warn">{{ t.different }}</b>{% else %}{{ t.different if t.different is not none else '—' }}{% endif %}</td>
+      <td>{{ t.same if t.same is not none else '—' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7">Таблиц нет</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<form method="post" action="{{ url_for('plan_view') }}" class="card">
+  <input type="hidden" name="csrf" value="{{ csrf_token }}">
+  <h2>Построить план синхронизации</h2>
+  <p>
+    <label class="inline"><input type="radio" name="direction" value="push" checked> Отправить на сервер (локальная → сервер)</label><br>
+    <label class="inline"><input type="radio" name="direction" value="pull"> Забрать с сервера (сервер → локальная)</label>
+  </p>
+  <p>Таблицы (если ничего не отмечено, берутся все):<br>
+    {% for t in status %}<label class="inline"><input type="checkbox" name="tables" value="{{ t.name }}"> {{ t.name }}</label> {% endfor %}
+  </p>
+  <p><label class="inline"><input type="checkbox" name="delete_missing" value="1"> Удалять строки, которых нет в источнике</label></p>
+  <button>Показать план</button>
+  <span class="muted">План только показывается, в базы ничего не записывается.</span>
+</form>
+{% endblock %}
